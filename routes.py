@@ -28,7 +28,7 @@ def create_new_folder(local_dir):
 
 
 @app.route('/upload/<gui_type>', methods=['POST'])
-def api_root(gui_type):
+def upload_gui(gui_type):
     post_body = None
     video = None
 
@@ -68,3 +68,28 @@ def api_root(gui_type):
             f.write(video.read())
 
     return jsonify(success=True, uploaded=gui_type, element_type=element_type)
+
+
+@app.route('/upload/actions/<input_type>', methods=['POST'])
+def upload_functions(input_type):
+    post_body = None
+    video = None
+
+    if 'Content-type' in request.headers:
+        if request.headers.get('Content-type') == 'application/json':
+            post_body = request.get_json(force=True)
+            input = post_body['actions']
+
+            scene_id = post_body['scene_id']
+            user_id = post_body['user_id']
+
+            UPLOAD_PATH = os.path.join('scenes', 'scene_' + str(scene_id) + '_user_' + str(user_id))
+            UPLOAD_PATH = os.path.join(UPLOAD_PATH, 'Assets')
+
+            filename = input_type + '.txt'
+
+            with open(os.path.join(UPLOAD_PATH, filename), 'w+') as f:
+                for row in input:
+                    f.write(row + "\n")
+
+    return jsonify(success=True, uploaded=input_type, file_path= os.path.join(UPLOAD_PATH, filename))
