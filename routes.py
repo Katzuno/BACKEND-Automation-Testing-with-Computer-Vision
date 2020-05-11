@@ -6,18 +6,52 @@ from flask_jwt import JWT
 import json
 from flask import flash, request, redirect, url_for, send_from_directory, jsonify
 from werkzeug.utils import secure_filename
-from . import app, allowed_file
+from . import app, allowed_file, insert, select
 import base64
-
-
-@app.route('/hello')
-def hello():
-    return 'Hello world!'
 
 
 @app.route('/auth', methods=['POST'])
 def auth():
     return 'Hello world'
+
+
+@app.route('/create/scene', methods=['POST'])
+def create_scene():
+    post_body = None
+
+    if 'Content-type' in request.headers:
+        if request.headers.get('Content-type') == 'application/json':
+            post_body = request.get_json(force=True)
+    else:
+        return jsonify(status=403, message='Content-type header not found')
+
+    sceneName = post_body['scene_name']
+    userId = int(post_body['user_id'])
+    if insert(fields_to_insert="user_id, scene_name", table_name='SCENES', value1=userId, value2=sceneName):
+        return jsonify(status=201, message='Created')
+    return jsonify(status=505, message='SQL error')
+
+
+@app.route('/get/scenes', methods=['POST'])
+def get_scenes():
+    post_body = None
+
+    if 'Content-type' in request.headers:
+        if request.headers.get('Content-type') == 'application/json':
+            post_body = request.get_json(force=True)
+    else:
+        return jsonify(status=403, message='Content-type header not found')
+
+    userId = int(post_body['user_id'])
+    scenesList = select(fields_selected="scene_name", table_name='SCENES')
+    scenes = []
+    for scene in scenesList:
+        scenes.append(scene[0])
+
+    if scenesList:
+        return jsonify(status=201, scenes=scenes)
+
+    return jsonify(status=505, message='SQL error')
 
 
 def create_new_folder(local_dir):
@@ -38,7 +72,7 @@ def upload_gui(gui_type):
         else:
             post_body = request.form
             if "video" not in request.files:
-                return jsonify(status=400, message='Video not found in multipart/form-data request')
+                return jsonify(status=409, message='Video not found in multipart/form-data request')
             video = request.files.get('video')
     else:
         return jsonify(status=403, message='Content-type header not found')
@@ -57,13 +91,15 @@ def upload_gui(gui_type):
     if not video:
         if "base64string" in post_body:
             img_data = base64.b64decode(post_body['base64string'])
-            filename = element_type + '.jpg'
+            filename = element_type + '.png'
+            create_new_folder(UPLOAD_PATH)
             with open(os.path.join(UPLOAD_PATH, filename), 'wb') as f:
                 f.write(img_data)
         else:
             return jsonify(Error="Image or video is missing")
     else:
-        filename = element_type + '-2.mov'
+        filename = element_type + '.mov'
+        create_new_folder(UPLOAD_PATH)
         with open(os.path.join(UPLOAD_PATH, filename), 'wb') as f:
             f.write(video.read())
 
@@ -90,6 +126,6 @@ def upload_functions(input_type):
 
             with open(os.path.join(UPLOAD_PATH, filename), 'w+') as f:
                 for row in input:
-                    f.write(row + "\n")
+                    f.write(row)
 
-    return jsonify(success=True, uploaded=input_type, file_path= os.path.join(UPLOAD_PATH, filename))
+    return jsonify(success=True, uploaded=input_type, file_path=os.path.join(UPLOAD_PATH, filename))
