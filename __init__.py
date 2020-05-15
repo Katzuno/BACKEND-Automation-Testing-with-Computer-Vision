@@ -11,7 +11,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 app = Flask(__name__)
 CORS(app)
 app.config['SCENE_FOLDER'] = os.path.join(os.path.dirname(os.path.realpath(__file__)), SCENES_FOLDER)
-
+app.config['ATCV_FILE'] = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'at_cv.py')
 mysql = MySQL()
 app.config['MYSQL_DATABASE_USER'] = 'root'
 app.config['MYSQL_DATABASE_PASSWORD'] = ''

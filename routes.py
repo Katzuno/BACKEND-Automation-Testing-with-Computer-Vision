@@ -8,6 +8,7 @@ from flask import flash, request, redirect, url_for, send_from_directory, jsonif
 from werkzeug.utils import secure_filename
 from . import app, allowed_file, insert, select
 import base64
+import subprocess
 
 
 @app.route('/auth', methods=['POST'])
@@ -59,6 +60,27 @@ def create_new_folder(local_dir):
     if not os.path.exists(newpath):
         os.makedirs(newpath)
     return newpath
+
+
+@app.route('/run/scene', methods=['POST'])
+def run_scene():
+    post_body = None
+    if 'Content-type' in request.headers:
+        if request.headers.get('Content-type') == 'application/json':
+            post_body = request.get_json(force=True)
+    else:
+        return jsonify(status=403, message='Content-type header not found')
+
+    userId = post_body['user_id']
+    sceneId = post_body['scene_id']
+    sceneFolder = os.path.join(app.config['SCENE_FOLDER'], 'scene_' + str(sceneId) + '_user_' + str(userId))
+    assetsFolder = os.path.join(sceneFolder, 'Assets')
+    process = subprocess.Popen(['python', app.config['ATCV_FILE'], assetsFolder],
+                               stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+
+    return jsonify(status=201, message='Scene finished, please refresh!')
 
 
 @app.route('/upload/<gui_type>', methods=['POST'])

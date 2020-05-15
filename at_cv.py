@@ -12,7 +12,7 @@ else:
 
 print(assets_path)
 
-output_file_name = 'output_file.txt'
+output_file_name = os.path.join(assets_path, 'output_file.txt')
 output_file = open(output_file_name, 'w')
 
 input_fields_path = os.path.join(assets_path, 'input_fileds')
