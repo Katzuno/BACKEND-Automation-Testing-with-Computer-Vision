@@ -55,6 +55,32 @@ def get_scenes():
     return jsonify(status=505, message='SQL error')
 
 
+@app.route('/get/scene/output', methods=['POST'])
+def get_scene_output():
+    post_body = None
+
+    if 'Content-type' in request.headers:
+        if request.headers.get('Content-type') == 'application/json':
+            post_body = request.get_json(force=True)
+    else:
+        return jsonify(status=403, message='Content-type header not found')
+
+    userId = int(post_body['user_id'])
+    sceneId = int(post_body['scene_id'])
+
+    filename = 'output_file.txt'
+    sceneFolder = os.path.join(app.config['SCENE_FOLDER'], 'scene_' + str(sceneId) + '_user_' + str(userId))
+    assetsFolder = os.path.join(sceneFolder, 'Assets')
+    content = ''
+    with open(os.path.join(assetsFolder, filename), 'r') as f:
+        content = f.read()
+        print(content)
+    if content:
+        return jsonify(status=200, output=content)
+
+    return jsonify(status=407, message='Scene not yet finished')
+
+
 def create_new_folder(local_dir):
     newpath = local_dir
     if not os.path.exists(newpath):

@@ -57,6 +57,7 @@ pages = el.load_pages(pages_path)
 # Function load
 functions = el.load_functions(functions_path)
 
+print(input_path)
 # test file
 cap = cv2.VideoCapture(input_path)
 if cap.isOpened() == False:
@@ -67,10 +68,22 @@ _, first_frame = cap.read()
 elements_coord = el.get_elements_coordinates(elements, first_frame, tm_threshold_elements)
 elements_color_diff = el.get_elements_color_diff(elements, elements_coord, first_frame)
 
+view_frame = first_frame.copy()
+for elem in elements_coord:
+    (startX, startY), (endX, endY) = elements_coord[elem]
+    cv2.rectangle(view_frame, (startX, startY), (endX, endY), color_red, 3)
+
+cv2.imwrite('DEBUG_IMAGE.jpg', view_frame)
 # get current page
-print('se apeleaza')
+print()
+print()
+print('se apeleaza ====================================================')
+
+print('-----------------------------')
 current_page = el.get_current_page(elements_coord, pages)
+print(current_page)
 event_history.append('Starting Page - ' + current_page)
+
 
 # process video frame by frame
 old_frame = first_frame
