@@ -7,9 +7,14 @@ import os
 import pytesseract
 from pytesseract import image_to_string
 from PIL import Image, ImageEnhance, ImageFilter
+import matplotlib.pyplot as plt
+
+from google.cloud import vision
+import io
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'GOOGLE_CLOUD_CREDENTIALS.json'
+client = vision.ImageAnnotatorClient()
 '''
 	notes:
 		-	for get_evet, if OCR does not work propperly, continue to preprocess image. 
@@ -17,7 +22,29 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tessera
 '''
 
 
-def get_event(frame, elements, elements_coord, key, functions, types, input_fields_path):
+def detect_text(image, mode='GCloud'):
+    if mode == 'GCloud':
+        image = vision.types.Image(content=cv2.imencode('.jpg', image)[1].tobytes())
+
+        response = client.text_detection(image=image)
+
+        if response.error.message:
+            raise Exception(
+                '{}\nFor more info on error messages, check: '
+                'https://cloud.google.com/apis/design/errors'.format(
+                    response.error.message))
+
+        texts = response.text_annotations
+        detections = ""
+        for text in texts:
+            detections += text.description + "\n"
+
+        return detections
+    elif mode == 'Tesseract':
+        return image_to_string(image, lang='eng')
+
+
+def get_event(frame, elements, elements_coord, key, functions, types, input_fields_path, mode='GCloud'):
     text_size = 150
 
     if key in functions:
@@ -29,19 +56,35 @@ def get_event(frame, elements, elements_coord, key, functions, types, input_fiel
             if types[param] == 'TextField':  # get text in text area
                 empty_field = elements[param]
                 empty_field = process_image_for_OCR(empty_field, scale_factor=5, filter='bilateralFilter')
-                empty_field_text = image_to_string(empty_field, lang='eng')
+                empty_field_text = detect_text(empty_field, mode)
+                print(empty_field_text)
+                print(type(empty_field_text))
                 split_empty_field_text = re.split(' |\n', empty_field_text)
-                print('---')
+                split_empty_field_text = list(dict.fromkeys(split_empty_field_text))
+                print('--- OCR APELAT, EMPTY FIELD TEXT -----')
                 print(split_empty_field_text)
 
                 (startX, startY), (endX, endY) = elements_coord[param]
                 field_image = frame[startY:endY, startX:endX]
-                field_image = process_image_for_OCR(field_image, scale_factor=4)
-                field_string = image_to_string(field_image, lang='eng')
+                try:
+                    field_image = process_image_for_OCR(field_image, scale_factor=4)
+                    field_string = detect_text(field_image, mode)
+                except:
+                    field_string = '{Hi, friends!} \n'
                 split_field_text = re.split(' |\n', field_string)
-                print(split_field_text)
-                print('---')
+                split_field_text = list(dict.fromkeys(split_field_text))
 
+                print('----- TEXT DETECTAT: -----')
+                print(split_field_text)
+                plt.imshow(frame)
+                plt.title('ORIGINAL IMAGE, detected ' + empty_field_text)
+                plt.show()
+                # plt.imshow(field_image)
+                # plt.title('COMPLETED IMAGE, detected ' + field_string)
+                print('--- OCR TERMINAT, SE FACE DIFF -----')
+
+                if len(split_field_text) > 1:
+                    split_field_text.remove('')
                 diff = list_diff(split_field_text, split_empty_field_text)
                 text = ' '.join(diff)
                 # processed_string = field_string.split(' ')
@@ -113,6 +156,11 @@ def get_event(frame, elements, elements_coord, key, functions, types, input_fiel
                 text_string = image_to_string(text_image, lang='eng')
 
                 event = event + text_string + ', '
+
+            if types[param] == 'Draggable':
+                # draw a bounding box around the draggable element of color pink
+                cv2.rectangle(frame, (startX, startY), (endX, endY), (233, 51, 255), 3)
+                cv2.imwrite('Detected draggable.jpg', frame)
 
         if len(parameters) > 0:
             event = event[:-2]
@@ -204,15 +252,72 @@ def load_pages(file_name):
     return pages
 
 
-def get_current_page(elements_coord, pages):
+def patch_frame_for_ocr(frame, element_coords, mode='GCloud'):
+    (startX, startY), (endX, endY) = element_coords
+    field_image = frame[startY:endY, startX:endX]
+    try:
+        field_image = process_image_for_OCR(field_image, scale_factor=4)
+        field_string = detect_text(field_image, mode)
+    except:
+        cv2.imshow(field_image)
+    split_field_text = re.split(' |\n', field_string)
+    split_field_text = ''.join(list(dict.fromkeys(split_field_text)))
+    return split_field_text
+
+
+def get_misclassified_elements_through_ocr(frame, element_1_name, element_1_coords, element_2_name, element_2_coords):
+    """
+    This function will diff elements by doing OCR on them
+    @TODO: We can improve this by doing OCR on original template element instead of comparing with file_name
+    :rtype: object
+    """
+    misclassified_element_name = ''
+
+    if patch_frame_for_ocr(frame, element_1_coords).lower() not in element_1_name.lower():
+        misclassified_element_name = element_1_name
+    elif patch_frame_for_ocr(frame, element_2_coords).lower() not in element_2_name.lower():
+        misclassified_element_name = element_2_name
+
+    return misclassified_element_name
+
+
+def find_overlapping_elements_on_page(elements_on_page_name, elements_on_page_coordinates):
+    print(elements_on_page_coordinates)
+    for i in range(len(elements_on_page_coordinates) - 1):
+        print(elements_on_page_coordinates[i])
+        coord_elem_1_top_left, coord_elem_1_bottom_right = elements_on_page_coordinates[i][0], \
+                                                           elements_on_page_coordinates[i][1]
+        for j in range(i + 1, len(elements_on_page_coordinates)):
+            coord_elem_2_top_left, coord_elem_2_bottom_right = elements_on_page_coordinates[j][0], \
+                                                               elements_on_page_coordinates[j][1]
+            if do_overlap(coord_elem_1_top_left, coord_elem_1_bottom_right, coord_elem_2_top_left,
+                          coord_elem_2_bottom_right):
+                return elements_on_page_name[i], elements_on_page_coordinates[i], elements_on_page_name[j], \
+                       elements_on_page_coordinates[j]
+    return None, None, None, None
+
+
+def intersect_pages_by_elements(all_pages, elements_coord, pages):
+    elements_on_page_coordinates = []
+    elements_on_page_name = []
+
+    for eid in elements_coord.keys():
+        if elements_coord[eid] != [(0, 0), (0, 0)]:
+            elements_on_page_name.append(eid)
+            elements_on_page_coordinates.append(elements_coord[eid])
+            all_pages = all_pages.intersection(pages[eid])
+
+    return elements_on_page_name, elements_on_page_coordinates, all_pages
+
+
+def get_current_page(elements_coord, pages, frame, all_pages=None):
     all_pages = set()
 
     for page in pages.values():
         all_pages = all_pages.union(page)
 
-    for eid in elements_coord.keys():
-        if elements_coord[eid] != [(0, 0), (0, 0)]:
-            all_pages = all_pages.intersection(pages[eid])
+    elements_on_page_name, elements_on_page_coordinates, all_pages = intersect_pages_by_elements(all_pages,
+                                                                                                 elements_coord, pages)
 
     if len(all_pages) == 1:
         current_page = all_pages.pop()
@@ -263,12 +368,27 @@ def get_elements_coordinates(elements, screenshot, threshold):
     screenshot_gray = cv2.cvtColor(screenshot, cv2.COLOR_BGR2GRAY)
 
     elements_coord = dict()
+    elements_on_page_name = []
+    elements_on_page_coordinates = []
 
     for eid in elements.keys():
         template = cv2.cvtColor(elements[eid], cv2.COLOR_BGR2GRAY)
         (startX, startY, endX, endY) = find_element(screenshot_gray, template, threshold)
-        elements_coord[eid] = [(startX, startY), (endX, endY)]
+        current_element_coords = [(startX, startY), (endX, endY)]
+        if (startX, startY, endX, endY) != (0, 0, 0, 0):
+            elements_on_page_name.append(eid)
+            elements_on_page_coordinates.append(current_element_coords)
+        elements_coord[eid] = current_element_coords
 
+    elem1_name, elem1_coord, elem2_name, elem2_coord = find_overlapping_elements_on_page(elements_on_page_name,
+                                                                                         elements_on_page_coordinates)
+    if elem1_name == elem1_coord == elem2_name == elem2_coord == None:
+        return elements_coord
+
+    misclassified_element_name = get_misclassified_elements_through_ocr(screenshot, elem1_name, elem1_coord, elem2_name,
+                                                                        elem2_coord)
+    if misclassified_element_name != '':
+        elements_coord[misclassified_element_name] = [(0, 0), (0, 0)]
     return elements_coord
 
 
@@ -278,9 +398,9 @@ def find_element(image, element, threshold=0.9, edge_detection=False, multi_scal
     else:
         scales = [1]
 
-    print('========================== find_elem =====================')
-    print(element)
-    print('========================== end find_elem =================')
+    # print('========================== find_elem =====================')
+    # print(element)
+    # print('========================== end find_elem =================')
     (tH, tW) = element.shape[:2]
     found = None
 

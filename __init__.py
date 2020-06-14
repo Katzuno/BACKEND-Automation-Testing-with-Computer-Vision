@@ -25,8 +25,19 @@ cursor = conn.cursor()
 
 
 def insert(fields_to_insert="", table_name="", value1="", value2=""):
-    str_to_format = "INSERT INTO %s(%s) VALUES ('%d','%s')"
+    str_to_format = "INSERT INTO %s(%s) VALUES ('%s','%s')"
     sql_query = str_to_format % (table_name, fields_to_insert, value1, value2)
+    print(sql_query)
+    if cursor.execute(sql_query):
+        conn.commit()
+        return {'Status': 'Success'}
+    else:
+        return ""
+
+
+def delete(table_name="", value1=""):
+    str_to_format = "DELETE FROM %s WHERE id = %s"
+    sql_query = str_to_format % (table_name, value1)
     print(sql_query)
     if cursor.execute(sql_query):
         conn.commit()
@@ -41,6 +52,7 @@ def select(fields_selected="", table_name="", where_clause="", limit=""):
         sql_query = sql_query[:-7]
     if where_clause == "":
         sql_query = sql_query[:-7]
+    print(sql_query)
     cursor.execute(sql_query)
     return cursor.fetchall()
 

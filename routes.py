@@ -6,7 +6,7 @@ from flask_jwt import JWT
 import json
 from flask import flash, request, redirect, url_for, send_from_directory, jsonify
 from werkzeug.utils import secure_filename
-from . import app, allowed_file, insert, select
+from . import app, allowed_file, insert, select, delete
 import base64
 import subprocess
 
@@ -14,6 +14,43 @@ import subprocess
 @app.route('/auth', methods=['POST'])
 def auth():
     return 'Hello world'
+
+
+@app.route('/get/users', methods=['GET'])
+def get_users():
+    usersList = select(fields_selected="id, username", table_name='USER')
+    users = []
+    for user in usersList:
+        users.append({'id': user[0], 'username': user[1]})
+    if usersList:
+        print(users)
+        return jsonify(status=201, users=users)
+
+    return jsonify(status=505, message='SQL error')
+
+
+@app.route('/create/user', methods=['POST'])
+def create_user():
+    post_body = None
+
+    if 'Content-type' in request.headers:
+        if request.headers.get('Content-type') == 'application/json':
+            post_body = request.get_json(force=True)
+    else:
+        return jsonify(status=403, message='Content-type header not found')
+
+    username = post_body['username']
+    password = post_body['password']
+    if insert(fields_to_insert="username, password", table_name='USER', value1=username, value2=password):
+        return jsonify(status=201, message='Created')
+    return jsonify(status=505, message='SQL error')
+
+
+@app.route('/delete/user/<user_id>', methods=['POST'])
+def delete_user(user_id):
+    if delete(table_name='USER', value1=user_id):
+        return jsonify(status=205, message='Deleted')
+    return jsonify(status=505, message='SQL error')
 
 
 @app.route('/create/scene', methods=['POST'])
@@ -75,7 +112,6 @@ def get_scene_output():
     with open(os.path.join(assetsFolder, filename), 'r') as f:
         content = f.read()
         print(content)
-    if content:
         return jsonify(status=200, output=content)
 
     return jsonify(status=407, message='Scene not yet finished')
@@ -99,6 +135,8 @@ def run_scene():
 
     userId = post_body['user_id']
     sceneId = post_body['scene_id']
+    print(userId)
+    print(sceneId)
     sceneFolder = os.path.join(app.config['SCENE_FOLDER'], 'scene_' + str(sceneId) + '_user_' + str(userId))
     assetsFolder = os.path.join(sceneFolder, 'Assets')
     process = subprocess.Popen(['python', app.config['ATCV_FILE'], assetsFolder],

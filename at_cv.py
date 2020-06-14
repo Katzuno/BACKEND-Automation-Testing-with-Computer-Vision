@@ -8,7 +8,7 @@ import numpy as np
 if len(sys.argv) > 1:
     assets_path = sys.argv[1]
 else:
-    assets_path = "Assets"
+    assets_path = "C:\\Users\\erikh\\Desktop\\WORK\\Personal\\Backend-AutomaticTestingCV\\scenes\\scene_3_user_2\\Assets"
 
 print(assets_path)
 
@@ -29,7 +29,10 @@ color_yellow = (51, 225, 255)
 
 visualize = True
 tm_threshold_cursor = 0.5
-tm_threshold_elements = 0.7
+if 'scene_1' in assets_path:
+    tm_threshold_elements = 0.7
+else:
+    tm_threshold_elements = 0.85
 threshold_page = 150000
 intensity_threshold = 4.0
 current_page = None
@@ -46,7 +49,6 @@ cursor = cv2.imread(cursor_path)
 cv2.imwrite("cursor.jpg", cursor)
 
 cursor = cv2.cvtColor(cursor, cv2.COLOR_BGR2GRAY)
-# cursor = cv2.Canny(cursor, 50, 200)
 
 # Element types
 types = el.get_elements_type(elements)
@@ -80,13 +82,13 @@ print()
 print('se apeleaza ====================================================')
 
 print('-----------------------------')
-current_page = el.get_current_page(elements_coord, pages)
+current_page = el.get_current_page(elements_coord, pages, view_frame)
 print(current_page)
 event_history.append('Starting Page - ' + current_page)
 
-
 # process video frame by frame
 old_frame = first_frame
+framesHistory = [old_frame.copy()]
 while cap.isOpened():
     ret, frame = cap.read()
     if ret == False:
@@ -109,10 +111,11 @@ while cap.isOpened():
         elements_color_diff = el.get_elements_color_diff(elements, elements_coord, frame)
 
     if new_page:
-        new_current_page = el.get_current_page(elements_coord, pages)
+        new_current_page = el.get_current_page(elements_coord, pages, frame)
         if new_current_page is not None:
             current_page = new_current_page
     old_frame = frame
+    framesHistory.append(old_frame.copy())
 
     # find cursor
     image_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -139,17 +142,12 @@ while cap.isOpened():
 
             if intensity_diff > intensity_threshold:
                 click = True
-            # print('----')
-            # print('Click: ' + str(click))
-            # print('Intens diff: ' + str(intensity_diff))
-            # print('Animation Start: ' + str(animation_start))
-            # print('----')
             if click:
                 if animation_start or (intensity_diff < intensity_threshold and animation_in_progress is False):
-                    # print(abs(elements_color_diff[eid] - el.color_diff(avg1,avg2)))
-                    # event = "Element " + str(eid) + " pressed!"
+                    # Element str(eid) pressed!
                     key = eid, current_page
-                    action = el.get_event(frame, elements, elements_coord, key, functions, types, input_fields_path)
+                    action = el.get_event(framesHistory[-2], elements, elements_coord, key, functions, types,
+                                          input_fields_path)
                     event = current_page + ' ' + str(action)
                     if action is not None and event != event_history[-1]:
                         event_history.append(event)
