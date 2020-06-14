@@ -371,6 +371,8 @@ def get_elements_coordinates(elements, screenshot, threshold):
     elements_on_page_name = []
     elements_on_page_coordinates = []
 
+    print(elements.keys())
+
     for eid in elements.keys():
         template = cv2.cvtColor(elements[eid], cv2.COLOR_BGR2GRAY)
         (startX, startY, endX, endY) = find_element(screenshot_gray, template, threshold)

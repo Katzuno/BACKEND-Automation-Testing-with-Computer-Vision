@@ -18,7 +18,7 @@ output_file = open(output_file_name, 'w')
 input_fields_path = os.path.join(assets_path, 'input_fileds')
 cursor_path = os.path.join(assets_path, 'cursor.png')
 elements_path = os.path.join(assets_path, 'elements')
-input_path = os.path.join(assets_path, 'app_rec.mov')
+input_path = os.path.join(assets_path, 'app_rec.mp4')
 elements_img_type = 'png'
 pages_path = os.path.join(assets_path, 'pages.txt')
 functions_path = os.path.join(assets_path, 'functions.txt')
@@ -32,7 +32,7 @@ tm_threshold_cursor = 0.5
 if 'scene_1' in assets_path:
     tm_threshold_elements = 0.7
 else:
-    tm_threshold_elements = 0.85
+    tm_threshold_elements = 0.7
 threshold_page = 150000
 intensity_threshold = 4.0
 current_page = None
@@ -114,6 +114,12 @@ while cap.isOpened():
         new_current_page = el.get_current_page(elements_coord, pages, frame)
         if new_current_page is not None:
             current_page = new_current_page
+            print('---------------------------')
+            print(current_page)
+            cv2.imwrite('DEBUG_IMAGE_draggabke.jpg', frame)
+            for eid in elements.keys():
+                print(eid, elements_coord[eid])
+            print('=======================', end="\n\n")
     old_frame = frame
     framesHistory.append(old_frame.copy())
 
