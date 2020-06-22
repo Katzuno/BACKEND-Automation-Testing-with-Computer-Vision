@@ -18,7 +18,7 @@ output_file = open(output_file_name, 'w')
 input_fields_path = os.path.join(assets_path, 'input_fileds')
 cursor_path = os.path.join(assets_path, 'cursor.png')
 elements_path = os.path.join(assets_path, 'elements')
-input_path = os.path.join(assets_path, 'app_rec.mp4')
+input_path = os.path.join(assets_path, 'app_rec_new.mp4')
 elements_img_type = 'png'
 pages_path = os.path.join(assets_path, 'pages.txt')
 functions_path = os.path.join(assets_path, 'functions.txt')
@@ -32,7 +32,7 @@ tm_threshold_cursor = 0.5
 if 'scene_1' in assets_path:
     tm_threshold_elements = 0.7
 else:
-    tm_threshold_elements = 0.7
+    tm_threshold_elements = 0.85
 threshold_page = 150000
 intensity_threshold = 4.0
 current_page = None
@@ -59,7 +59,7 @@ pages = el.load_pages(pages_path)
 # Function load
 functions = el.load_functions(functions_path)
 
-print(input_path)
+# print(input_path)
 # test file
 cap = cv2.VideoCapture(input_path)
 if cap.isOpened() == False:
@@ -82,6 +82,7 @@ print()
 print('se apeleaza ====================================================')
 
 print('-----------------------------')
+print(types)
 current_page = el.get_current_page(elements_coord, pages, view_frame)
 print(current_page)
 event_history.append('Starting Page - ' + current_page)
@@ -89,85 +90,122 @@ event_history.append('Starting Page - ' + current_page)
 # process video frame by frame
 old_frame = first_frame
 framesHistory = [old_frame.copy()]
+index = 0
+
+started_moving = False
+new_draggable_coords = None
 while cap.isOpened():
     ret, frame = cap.read()
     if ret == False:
         break
-
-    # check for new page
-    new_page = False
-    keyframes = keyframes[:-1]
-    keyframe = el.check_keyframe(frame, old_frame, threshold_page)
-    keyframes = np.append(keyframe, keyframes)
-    # print(keyframes)
-    if keyframe:
-        if animation_in_progress is False:
-            animation_start = True
-        animation_in_progress = True
-    elif animation_in_progress and np.sum(keyframes[:3]) == 0:
-        new_page = True
-        animation_in_progress = False
-        elements_coord = el.get_elements_coordinates(elements, frame, tm_threshold_elements)
-        elements_color_diff = el.get_elements_color_diff(elements, elements_coord, frame)
-
-    if new_page:
-        new_current_page = el.get_current_page(elements_coord, pages, frame)
-        if new_current_page is not None:
-            current_page = new_current_page
-            print('---------------------------')
-            print(current_page)
-            cv2.imwrite('DEBUG_IMAGE_draggabke.jpg', frame)
-            for eid in elements.keys():
-                print(eid, elements_coord[eid])
-            print('=======================', end="\n\n")
-    old_frame = frame
-    framesHistory.append(old_frame.copy())
-
-    # find cursor
     image_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    (startX, startY, endX, endY) = el.find_element(image_gray, cursor, tm_threshold_cursor)
+    # check for new page
+    if index % 2 == 0:
+        new_page = False
+        keyframes = keyframes[:-1]
+        keyframe = el.check_keyframe(frame, old_frame, threshold_page)
+        keyframes = np.append(keyframe, keyframes)
+        # print(keyframes)
+        if keyframe:
+            if animation_in_progress is False:
+                animation_start = True
+            animation_in_progress = True
+        elif animation_in_progress and np.sum(keyframes[:3]) == 0:
+            new_page = True
+            animation_in_progress = False
+            elements_coord = el.get_elements_coordinates(elements, frame, tm_threshold_elements)
+            elements_color_diff = el.get_elements_color_diff(elements, elements_coord, frame)
 
-    # draw a bounding box around the cursor
-    view_frame = frame.copy()
-    cv2.rectangle(view_frame, (startX, startY), (endX, endY), color_red, 3)
+        if new_page:
+            new_current_page = el.get_current_page(elements_coord, pages, frame)
+            if new_current_page is not None:
+                current_page = new_current_page
+                print('---------------------------')
+                print(current_page)
+                cv2.imwrite('DEBUG_IMAGE_draggabke.jpg', frame)
+                # for eid in elements.keys():
+                #    print(eid, elements_coord[eid])
+                # print('=======================', end="\n\n")
+        old_frame = frame
+        framesHistory.append(old_frame.copy())
 
-    cursor_on_element = False
+        # find cursor
+        image_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        (startX, startY, endX, endY) = el.find_element(image_gray, cursor, tm_threshold_cursor)
 
-    for eid in elements.keys():
-        color = color_green
-        if elements_coord[eid] != [(0, 0), (0, 0)] and el.do_overlap(elements_coord[eid][0], elements_coord[eid][1],
-                                                                     (startX, startY), (endX, endY)):
-            cursor_on_element = True
+        # draw a bounding box around the cursor
+        view_frame = frame.copy()
+        cv2.rectangle(view_frame, (startX, startY), (endX, endY), color_red, 3)
 
-            color = color_yellow
-            el_image = view_frame[elements_coord[eid][0][1]:elements_coord[eid][1][1],
-                       elements_coord[eid][0][0]:elements_coord[eid][1][0]]
-            avg1 = cv2.mean(elements[eid])[0:3]
-            avg2 = cv2.mean(el_image)[0:3]
-            intensity_diff = abs(elements_color_diff[eid] - el.color_diff(avg1, avg2))
+        cursor_on_element = False
+        cursor_on_draggable = False
+        element_moved = False
+        draggable_element_coord = None
+        hovered_draggable_name = None
 
-            if intensity_diff > intensity_threshold:
-                click = True
-            if click:
-                if animation_start or (intensity_diff < intensity_threshold and animation_in_progress is False):
-                    # Element str(eid) pressed!
-                    key = eid, current_page
-                    action = el.get_event(framesHistory[-2], elements, elements_coord, key, functions, types,
-                                          input_fields_path)
-                    event = current_page + ' ' + str(action)
-                    if action is not None and event != event_history[-1]:
+        for eid in elements.keys():
+            color = color_green
+            if elements_coord[eid] != [(0, 0), (0, 0)] and el.do_overlap(elements_coord[eid][0], elements_coord[eid][1],
+                                                                         (startX, startY), (endX, endY)):
+                cursor_on_element = True
+                if types[eid] == 'Draggable':
+                    cursor_on_draggable = True
+                    draggable_element_coord = elements_coord[eid]
+                    hovered_draggable_name = eid
+
+                color = color_yellow
+                el_image = view_frame[elements_coord[eid][0][1]:elements_coord[eid][1][1],
+                           elements_coord[eid][0][0]:elements_coord[eid][1][0]]
+                avg1 = cv2.mean(elements[eid])[0:3]
+                avg2 = cv2.mean(el_image)[0:3]
+                intensity_diff = abs(elements_color_diff[eid] - el.color_diff(avg1, avg2))
+
+                if intensity_diff > intensity_threshold:
+                    click = True
+                if click:
+                    # print('---------- Clicked --------------', animation_start, animation_in_progress, intensity_diff, intensity_threshold)
+                    # print('----------Click--------', cursor_on_draggable, draggable_element_coord)
+
+                    if cursor_on_draggable:
+                        element_moved, new_draggable_coords = el.check_element_moved(old_frame, elements,
+                                                                                     hovered_draggable_name,
+                                                                                     draggable_element_coord)
+                        if element_moved:
+                            started_moving = True
+                            # print(element_moved)
+                            # print(new_draggable_coords[0], new_draggable_coords[1])
+                            # color draggable pink every frame
+                            cv2.rectangle(view_frame, new_draggable_coords[0], new_draggable_coords[1], (233, 51, 255),
+                                          3)
+
+                    #print('=====ELEMENT MOVED: ', element_moved, started_moving)
+                    if element_moved is False and started_moving is True:
+                        started_moving = False
+                        elements_coord[hovered_draggable_name] = new_draggable_coords
+                        action = 'dragTo(' + str(new_draggable_coords[0]) + ', ' + str(new_draggable_coords[1])
+                        event = current_page + ' ' + action
                         event_history.append(event)
-                        print(event)
 
-                    animation_start = False
-                    click = False
+                    if animation_start or (intensity_diff < intensity_threshold and animation_in_progress is False):
+                        #print('======= Clicked 2 ============')
+                        # Element str(eid) pressed!
+                        key = eid, current_page
+                        action = el.get_event(framesHistory[-2], elements, elements_coord, key, functions, types,
+                                              input_fields_path)
+                        event = current_page + ' ' + str(action)
+                        if action is not None and event != event_history[-1]:
+                            event_history.append(event)
+                            print(event)
 
-        cv2.rectangle(view_frame, elements_coord[eid][0], elements_coord[eid][1], color, 3)
-    if cursor_on_element is False:
-        click = False
+                        animation_start = False
+                        click = False
 
-    if visualize:
-        frame = view_frame
+            cv2.rectangle(view_frame, elements_coord[eid][0], elements_coord[eid][1], color, 3)
+        if cursor_on_element is False:
+            click = False
+
+        if visualize:
+            frame = view_frame
     resized = imutils.resize(frame, width=int(image_gray.shape[1] * 0.6))
     cv2.imshow("Video", resized)
 

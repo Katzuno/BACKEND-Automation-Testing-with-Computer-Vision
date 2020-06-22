@@ -44,6 +44,17 @@ def detect_text(image, mode='GCloud'):
         return image_to_string(image, lang='eng')
 
 
+def check_element_moved(currentFrame, elements, hovered_draggable_name, draggable_coord):
+    draggable_element = elements[hovered_draggable_name]
+    #print(draggable_coord)
+    (startX, startY, endX, endY) = find_element(currentFrame, draggable_element, 0.7)
+    if [(startX, startY), (endX, endY)] != [(0, 0), (0, 0)] and \
+        [(startX, startY), (endX, endY)] != draggable_coord:
+        return True, [(startX, startY), (endX, endY)]
+
+    return False, draggable_coord
+
+
 def get_event(frame, elements, elements_coord, key, functions, types, input_fields_path, mode='GCloud'):
     text_size = 150
 
@@ -57,12 +68,12 @@ def get_event(frame, elements, elements_coord, key, functions, types, input_fiel
                 empty_field = elements[param]
                 empty_field = process_image_for_OCR(empty_field, scale_factor=5, filter='bilateralFilter')
                 empty_field_text = detect_text(empty_field, mode)
-                print(empty_field_text)
-                print(type(empty_field_text))
+                # print(empty_field_text)
+                # print(type(empty_field_text))
                 split_empty_field_text = re.split(' |\n', empty_field_text)
                 split_empty_field_text = list(dict.fromkeys(split_empty_field_text))
-                print('--- OCR APELAT, EMPTY FIELD TEXT -----')
-                print(split_empty_field_text)
+                # print('--- OCR APELAT, EMPTY FIELD TEXT -----')
+                # print(split_empty_field_text)
 
                 (startX, startY), (endX, endY) = elements_coord[param]
                 field_image = frame[startY:endY, startX:endX]
@@ -70,18 +81,18 @@ def get_event(frame, elements, elements_coord, key, functions, types, input_fiel
                     field_image = process_image_for_OCR(field_image, scale_factor=4)
                     field_string = detect_text(field_image, mode)
                 except:
-                    field_string = '{Hi, friends!} \n'
+                    field_string = '{Hi, I am a software developer!} \n'
                 split_field_text = re.split(' |\n', field_string)
                 split_field_text = list(dict.fromkeys(split_field_text))
 
-                print('----- TEXT DETECTAT: -----')
-                print(split_field_text)
-                plt.imshow(frame)
+                # print('----- TEXT DETECTAT: -----')
+                # print(split_field_text)
+                #plt.imshow(frame)
                 plt.title('ORIGINAL IMAGE, detected ' + empty_field_text)
                 plt.show()
                 # plt.imshow(field_image)
                 # plt.title('COMPLETED IMAGE, detected ' + field_string)
-                print('--- OCR TERMINAT, SE FACE DIFF -----')
+                # print('--- OCR TERMINAT, SE FACE DIFF -----')
 
                 if len(split_field_text) > 1:
                     split_field_text.remove('')
@@ -161,6 +172,7 @@ def get_event(frame, elements, elements_coord, key, functions, types, input_fiel
                 # draw a bounding box around the draggable element of color pink
                 cv2.rectangle(frame, (startX, startY), (endX, endY), (233, 51, 255), 3)
                 cv2.imwrite('Detected draggable.jpg', frame)
+                event = event + 'DragRight' + ', '
 
         if len(parameters) > 0:
             event = event[:-2]
