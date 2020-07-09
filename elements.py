@@ -102,6 +102,28 @@ def get_event(frame, elements, elements_coord, key, functions, types, input_fiel
                 # print param + ' - ' + processed_string
                 event = event + text + ', '
 
+            if types[param] == 'Tablet':  # get text after the checked radio button
+                (startX, startY), (endX, endY) = elements_coord[param]
+                field_image = frame[startY:endY, startX:endX]
+
+                radio_on = cv2.imread(os.path.join(input_fields_path, 'RadioButton_on.png'))
+                print('========================== get_event =====================')
+                print(radio_on)
+                print('========================== end get_event =================')
+
+                (startX, startY, endX, endY) = find_element(field_image, radio_on)
+
+                textbox_startX, textbox_startY = endX, startY
+                textbox_endX, textbox_endY = endX + text_size, endY
+                text_image = field_image[textbox_startY:textbox_endY, textbox_startX:textbox_endX]
+                # cv2.imwrite('image_of_text.png',text_image)
+                text_image = process_image_for_OCR(text_image, scale_factor=2)
+                text_string = image_to_string(text_image, lang='eng')
+                # cv2.imshow('img',text_image)
+                # cv2.waitKey(0)
+                # cv2.destroyAllWindows()
+                event = event + text_string + ', '
+
             if types[param] == 'RadioButton':  # get text after the checked radio button
                 (startX, startY), (endX, endY) = elements_coord[param]
                 field_image = frame[startY:endY, startX:endX]
@@ -386,6 +408,7 @@ def get_elements_coordinates(elements, screenshot, threshold):
     print(elements.keys())
 
     for eid in elements.keys():
+        print(eid)
         template = cv2.cvtColor(elements[eid], cv2.COLOR_BGR2GRAY)
         (startX, startY, endX, endY) = find_element(screenshot_gray, template, threshold)
         current_element_coords = [(startX, startY), (endX, endY)]
@@ -405,6 +428,19 @@ def get_elements_coordinates(elements, screenshot, threshold):
         elements_coord[misclassified_element_name] = [(0, 0), (0, 0)]
     return elements_coord
 
+
+def find_multi_appearance_element(image, element, threshold=0.5):
+    img_gray = image
+    template = element
+    w, h = template.shape[::-1]
+    res = cv2.matchTemplate(img_gray, template, cv2.TM_CCOEFF_NORMED)
+    loc = np.where(res >= threshold)
+    for pt in zip(*loc[::-1]):
+        (startX, startY) = ((pt[0]), pt[1])
+        (endX, endY) = ((pt[0] + w), pt[1] + h)
+        cv2.rectangle(image, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
+
+    return (startX, startY, endX, endY)
 
 def find_element(image, element, threshold=0.9, edge_detection=False, multi_scale=False, visualize=False):
     if multi_scale:

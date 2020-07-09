@@ -8,7 +8,7 @@ import numpy as np
 if len(sys.argv) > 1:
     assets_path = sys.argv[1]
 else:
-    assets_path = "C:\\Users\\erikh\\Desktop\\WORK\\Personal\\Backend-AutomaticTestingCV\\scenes\\scene_3_user_2\\Assets"
+    assets_path = "C:\\Users\\erikh\\Desktop\\WORK\\Personal\\Backend-AutomaticTestingCV\\scenes\\scene_6_user_2\\Assets"
 
 print(assets_path)
 
@@ -18,7 +18,7 @@ output_file = open(output_file_name, 'w')
 input_fields_path = os.path.join(assets_path, 'input_fileds')
 cursor_path = os.path.join(assets_path, 'cursor.png')
 elements_path = os.path.join(assets_path, 'elements')
-input_path = os.path.join(assets_path, 'app_rec_new.mp4')
+input_path = os.path.join(assets_path, 'app_rec.mov')
 elements_img_type = 'png'
 pages_path = os.path.join(assets_path, 'pages.txt')
 functions_path = os.path.join(assets_path, 'functions.txt')
@@ -32,7 +32,7 @@ tm_threshold_cursor = 0.5
 if 'scene_1' in assets_path:
     tm_threshold_elements = 0.7
 else:
-    tm_threshold_elements = 0.85
+    tm_threshold_elements = 0.35
 threshold_page = 150000
 intensity_threshold = 4.0
 current_page = None
@@ -73,7 +73,7 @@ elements_color_diff = el.get_elements_color_diff(elements, elements_coord, first
 view_frame = first_frame.copy()
 for elem in elements_coord:
     (startX, startY), (endX, endY) = elements_coord[elem]
-    cv2.rectangle(view_frame, (startX, startY), (endX, endY), color_red, 3)
+    cv2.rectangle(view_frame, (startX, startY), (endX, endY), color_green, 3)
 
 cv2.imwrite('DEBUG_IMAGE.jpg', view_frame)
 # get current page
@@ -84,6 +84,7 @@ print('se apeleaza ====================================================')
 print('-----------------------------')
 print(types)
 current_page = el.get_current_page(elements_coord, pages, view_frame)
+# current_page = 'RegisterPage'
 print(current_page)
 event_history.append('Starting Page - ' + current_page)
 
@@ -137,17 +138,30 @@ while cap.isOpened():
         view_frame = frame.copy()
         cv2.rectangle(view_frame, (startX, startY), (endX, endY), color_red, 3)
 
+        (cursor_startX, cursor_startY, cursor_endX, cursor_endY) = (startX, startY, endX, endY)
+
         cursor_on_element = False
         cursor_on_draggable = False
+        cursor_on_tablet = False
         element_moved = False
         draggable_element_coord = None
         hovered_draggable_name = None
+        hovered_tablet_name = None
+        tablet_exists = False
+        tablet_element_coord = None
 
         for eid in elements.keys():
             color = color_green
             if elements_coord[eid] != [(0, 0), (0, 0)] and el.do_overlap(elements_coord[eid][0], elements_coord[eid][1],
                                                                          (startX, startY), (endX, endY)):
                 cursor_on_element = True
+                if types[eid] == 'Tablet':
+                    cursor_on_tablet = True
+                    tablet_element_coord = elements_coord[eid]
+                    tablet_exists = True
+                    hovered_tablet_name = eid
+                    #el.find_multi_appearance_element(view_frame, elements[eid])
+
                 if types[eid] == 'Draggable':
                     cursor_on_draggable = True
                     draggable_element_coord = elements_coord[eid]
@@ -178,7 +192,13 @@ while cap.isOpened():
                             cv2.rectangle(view_frame, new_draggable_coords[0], new_draggable_coords[1], (233, 51, 255),
                                           3)
 
-                    #print('=====ELEMENT MOVED: ', element_moved, started_moving)
+                    if tablet_exists:
+                        started_moving = False
+                        action = 'click(' + str(cursor_startX) + ', ' + str(cursor_endX)
+                        event = current_page + ' ' + action
+                        event_history.append(event)
+
+                    # print('=====ELEMENT MOVED: ', element_moved, started_moving)
                     if element_moved is False and started_moving is True:
                         started_moving = False
                         elements_coord[hovered_draggable_name] = new_draggable_coords
@@ -187,7 +207,7 @@ while cap.isOpened():
                         event_history.append(event)
 
                     if animation_start or (intensity_diff < intensity_threshold and animation_in_progress is False):
-                        #print('======= Clicked 2 ============')
+                        # print('======= Clicked 2 ============')
                         # Element str(eid) pressed!
                         key = eid, current_page
                         action = el.get_event(framesHistory[-2], elements, elements_coord, key, functions, types,

@@ -1,0 +1,9 @@
+Email_TextField LoginPage RegisterPage
+Login_Button HomePage LoginPage
+Name_TextField LoginPage RegisterPage
+Password_TextField LoginPage RegisterPage
+PostMessage_TextField UserLoggedPage
+Register_Button HomePage RegisterPage
+SaySomething_TextField UserLoggedPage
+PostMessage_Button UserLoggedPage
+Unlock_Draggable HomePage

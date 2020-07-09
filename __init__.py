@@ -62,7 +62,7 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-@app.teardown_appcontext
+@app.teardown_appcontextAssets
 def shutdown_session(exception=None):
     shutdown_db_session()
 
