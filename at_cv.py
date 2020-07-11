@@ -2,6 +2,9 @@ import cv2
 import imutils
 import sys
 import os
+
+import random
+
 import elements as el
 import numpy as np
 
@@ -18,7 +21,7 @@ output_file = open(output_file_name, 'w')
 input_fields_path = os.path.join(assets_path, 'input_fileds')
 cursor_path = os.path.join(assets_path, 'cursor.png')
 elements_path = os.path.join(assets_path, 'elements')
-input_path = os.path.join(assets_path, 'app_rec.mov')
+input_path = os.path.join(assets_path, 'app_rec_lg.mp4')
 elements_img_type = 'png'
 pages_path = os.path.join(assets_path, 'pages.txt')
 functions_path = os.path.join(assets_path, 'functions.txt')
@@ -32,7 +35,7 @@ tm_threshold_cursor = 0.5
 if 'scene_1' in assets_path:
     tm_threshold_elements = 0.7
 else:
-    tm_threshold_elements = 0.35
+    tm_threshold_elements = 0.6
 threshold_page = 150000
 intensity_threshold = 4.0
 current_page = None
@@ -93,6 +96,7 @@ old_frame = first_frame
 framesHistory = [old_frame.copy()]
 index = 0
 
+
 started_moving = False
 new_draggable_coords = None
 while cap.isOpened():
@@ -147,19 +151,26 @@ while cap.isOpened():
         draggable_element_coord = None
         hovered_draggable_name = None
         hovered_tablet_name = None
-        tablet_exists = False
         tablet_element_coord = None
+        tablet_exists = False
 
         for eid in elements.keys():
             color = color_green
             if elements_coord[eid] != [(0, 0), (0, 0)] and el.do_overlap(elements_coord[eid][0], elements_coord[eid][1],
                                                                          (startX, startY), (endX, endY)):
                 cursor_on_element = True
+                print(types[eid])
                 if types[eid] == 'Tablet':
                     cursor_on_tablet = True
                     tablet_element_coord = elements_coord[eid]
                     tablet_exists = True
                     hovered_tablet_name = eid
+                    if tablet_exists:
+                        print('--------------------- TABLET EXISTS -----------------')
+                        action = 'pressTablet(' + str(random.randint(cursor_startX - 400, cursor_startX + 400)) + ', ' + str(random.randint(cursor_endX - 400, cursor_endX + 400)) + ')'
+                        event = current_page + ' ' + action
+                        print(event)
+                        event_history.append(event)
                     #el.find_multi_appearance_element(view_frame, elements[eid])
 
                 if types[eid] == 'Draggable':
@@ -193,9 +204,11 @@ while cap.isOpened():
                                           3)
 
                     if tablet_exists:
+                        print('--------------------- TABLET EXISTS -----------------')
                         started_moving = False
-                        action = 'click(' + str(cursor_startX) + ', ' + str(cursor_endX)
+                        action = 'pressTablet(' + str(cursor_startX) + ', ' + str(cursor_endX) + ')'
                         event = current_page + ' ' + action
+                        print(event)
                         event_history.append(event)
 
                     # print('=====ELEMENT MOVED: ', element_moved, started_moving)
