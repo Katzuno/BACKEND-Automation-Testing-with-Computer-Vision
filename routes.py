@@ -6,7 +6,14 @@ from flask_jwt import JWT
 import json
 from flask import flash, request, redirect, url_for, send_from_directory, jsonify
 from werkzeug.utils import secure_filename
-from . import app, allowed_file, insert, select, delete
+
+try:
+    # Assume we're a sub-module in a package.
+    from . import app, allowed_file, insert, select, delete
+except ImportError:
+    # Apparently no higher-level package has been imported, fall back to a local import.
+    import app, allowed_file, insert, select, delete
+
 import base64
 import subprocess
 
@@ -68,6 +75,8 @@ def create_scene():
     if insert(fields_to_insert="user_id, scene_name", table_name='SCENES', value1=userId, value2=sceneName):
         return jsonify(status=201, message='Created')
     return jsonify(status=505, message='SQL error')
+
+# This is post instead of get for development speed reasons
 
 
 @app.route('/get/scenes', methods=['POST'])

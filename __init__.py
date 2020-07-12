@@ -62,12 +62,12 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-@app.teardown_appcontextAssets
-def shutdown_session(exception=None):
-    shutdown_db_session()
-
-
-from . import routes
+try:
+    # Assume we're a sub-module in a package.
+    from . import routes
+except ImportError:
+    # Apparently no higher-level package has been imported, fall back to a local import.
+    import routes
 
 if __name__ == '__main__':
     app.config['SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY')
