@@ -81,18 +81,18 @@ def get_event(frame, elements, elements_coord, key, functions, types, input_fiel
                     field_image = process_image_for_OCR(field_image, scale_factor=4)
                     field_string = detect_text(field_image, mode)
                 except:
-                    field_string = '{Hi, I am a software developer!} \n'
+                    field_string = '{Hello, I am a software developer!} \n'
                 split_field_text = re.split(' |\n', field_string)
                 split_field_text = list(dict.fromkeys(split_field_text))
 
-                # print('----- TEXT DETECTAT: -----')
-                # print(split_field_text)
+                print('----- TEXT DETECTAT: -----')
+                print(split_field_text)
                 # plt.imshow(frame)
                 plt.title('ORIGINAL IMAGE, detected ' + empty_field_text)
                 plt.show()
                 # plt.imshow(field_image)
-                # plt.title('COMPLETED IMAGE, detected ' + field_string)
-                # print('--- OCR TERMINAT, SE FACE DIFF -----')
+                plt.title('COMPLETED IMAGE, detected ' + field_string)
+                print('--- OCR TERMINAT, SE FACE DIFF -----')
 
                 if len(split_field_text) > 1:
                     split_field_text.remove('')

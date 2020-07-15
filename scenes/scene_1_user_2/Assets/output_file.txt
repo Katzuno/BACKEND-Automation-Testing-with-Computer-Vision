@@ -1,0 +1,8 @@
+Starting Page - HomePage
+HomePage goToRegisterScreen()
+RegisterPage registerUser(Dave Smith, davesemail@gmail.com, davespass, Male,  Unmarried Student, Computers)
+UserRegisteredPage goBack()
+RegisterPage goBack()
+HomePage goToLoginScreen()
+LoginPage loginWithEmailAndPass(davesemail@gmail.com, davespass)
+UserLoggedPage postMessage({Hi, I am a software developer!})

@@ -11,7 +11,7 @@ import numpy as np
 if len(sys.argv) > 1:
     assets_path = sys.argv[1]
 else:
-    assets_path = "C:\\Users\\erikh\\Desktop\\WORK\\Personal\\Backend-AutomaticTestingCV\\scenes\\scene_6_user_2\\Assets"
+    assets_path = "C:\\Users\\erikh\\Desktop\\WORK\\Personal\\Backend-AutomaticTestingCV\\scenes\\scene_3_user_2\\Assets"
 
 print(assets_path)
 
@@ -37,7 +37,7 @@ if 'scene_1' in assets_path:
 elif 'scene_6' in assets_path:
     tm_threshold_elements = 0.6
 else:
-    tm_threshold_elements = 0.85
+    tm_threshold_elements = 0.75
 
 threshold_page = 150000
 intensity_threshold = 4.0
