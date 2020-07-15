@@ -117,6 +117,7 @@ def get_scene_output():
     filename = 'output_file.txt'
     sceneFolder = os.path.join(app.config['SCENE_FOLDER'], 'scene_' + str(sceneId) + '_user_' + str(userId))
     assetsFolder = os.path.join(sceneFolder, 'Assets')
+    print(assetsFolder)
     content = ''
     with open(os.path.join(assetsFolder, filename), 'r') as f:
         content = f.read()
@@ -148,6 +149,7 @@ def run_scene():
     print(sceneId)
     sceneFolder = os.path.join(app.config['SCENE_FOLDER'], 'scene_' + str(sceneId) + '_user_' + str(userId))
     assetsFolder = os.path.join(sceneFolder, 'Assets')
+    print('python ' + app.config['ATCV_FILE'] + ' ' +assetsFolder)
     process = subprocess.Popen(['python', app.config['ATCV_FILE'], assetsFolder],
                                stdout=subprocess.PIPE,
                                stderr=subprocess.PIPE)

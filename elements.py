@@ -8,7 +8,7 @@ import pytesseract
 from pytesseract import image_to_string
 from PIL import Image, ImageEnhance, ImageFilter
 import matplotlib.pyplot as plt
-
+from random import randint
 from google.cloud import vision
 import io
 
@@ -441,6 +441,11 @@ def find_multi_appearance_element(image, element, threshold=0.5):
         cv2.rectangle(image, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
 
     return (startX, startY, endX, endY)
+
+
+def calculate_error_margin(value, margin=400):
+    return randint(value - margin, value + margin)
+
 
 def find_element(image, element, threshold=0.9, edge_detection=False, multi_scale=False, visualize=False):
     if multi_scale:

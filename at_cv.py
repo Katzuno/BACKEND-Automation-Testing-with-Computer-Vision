@@ -21,7 +21,7 @@ output_file = open(output_file_name, 'w')
 input_fields_path = os.path.join(assets_path, 'input_fileds')
 cursor_path = os.path.join(assets_path, 'cursor.png')
 elements_path = os.path.join(assets_path, 'elements')
-input_path = os.path.join(assets_path, 'app_rec_lg.mp4')
+input_path = os.path.join(assets_path, 'app_rec.mov')
 elements_img_type = 'png'
 pages_path = os.path.join(assets_path, 'pages.txt')
 functions_path = os.path.join(assets_path, 'functions.txt')
@@ -34,8 +34,11 @@ visualize = True
 tm_threshold_cursor = 0.5
 if 'scene_1' in assets_path:
     tm_threshold_elements = 0.7
-else:
+elif 'scene_6' in assets_path:
     tm_threshold_elements = 0.6
+else:
+    tm_threshold_elements = 0.85
+
 threshold_page = 150000
 intensity_threshold = 4.0
 current_page = None
@@ -80,22 +83,21 @@ for elem in elements_coord:
 
 cv2.imwrite('DEBUG_IMAGE.jpg', view_frame)
 # get current page
-print()
-print()
-print('se apeleaza ====================================================')
+# print()
+# print()
+# print('se apeleaza ====================================================')
 
-print('-----------------------------')
-print(types)
+# print('-----------------------------')
+# print(types)
 current_page = el.get_current_page(elements_coord, pages, view_frame)
 # current_page = 'RegisterPage'
-print(current_page)
+# print(current_page)
 event_history.append('Starting Page - ' + current_page)
 
 # process video frame by frame
 old_frame = first_frame
 framesHistory = [old_frame.copy()]
 index = 0
-
 
 started_moving = False
 new_draggable_coords = None
@@ -125,9 +127,9 @@ while cap.isOpened():
             new_current_page = el.get_current_page(elements_coord, pages, frame)
             if new_current_page is not None:
                 current_page = new_current_page
-                print('---------------------------')
-                print(current_page)
-                cv2.imwrite('DEBUG_IMAGE_draggabke.jpg', frame)
+                # print('---------------------------')
+                # print(current_page)
+                # cv2.imwrite('DEBUG_IMAGE_draggabke.jpg', frame)
                 # for eid in elements.keys():
                 #    print(eid, elements_coord[eid])
                 # print('=======================', end="\n\n")
@@ -156,10 +158,7 @@ while cap.isOpened():
 
         for eid in elements.keys():
             color = color_green
-            if elements_coord[eid] != [(0, 0), (0, 0)] and el.do_overlap(elements_coord[eid][0], elements_coord[eid][1],
-                                                                         (startX, startY), (endX, endY)):
-                cursor_on_element = True
-                print(types[eid])
+            if elements_coord[eid] != [(0, 0), (0, 0)]:
                 if types[eid] == 'Tablet':
                     cursor_on_tablet = True
                     tablet_element_coord = elements_coord[eid]
@@ -167,11 +166,30 @@ while cap.isOpened():
                     hovered_tablet_name = eid
                     if tablet_exists:
                         print('--------------------- TABLET EXISTS -----------------')
-                        action = 'pressTablet(' + str(random.randint(cursor_startX - 400, cursor_startX + 400)) + ', ' + str(random.randint(cursor_endX - 400, cursor_endX + 400)) + ')'
+                        action = 'pressTablet(' + str(el.calculate_error_margin(cursor_startX)) + ', ' + str(
+                            el.calculate_error_margin(cursor_startY)) + ')'
                         event = current_page + ' ' + action
                         print(event)
                         event_history.append(event)
-                    #el.find_multi_appearance_element(view_frame, elements[eid])
+                    # el.find_multi_appearance_element(view_frame, elements[eid])
+
+            if elements_coord[eid] != [(0, 0), (0, 0)] and el.do_overlap(elements_coord[eid][0], elements_coord[eid][1],
+                                                                         (startX, startY), (endX, endY)):
+                cursor_on_element = True
+                print('TYPE: ', types[eid])
+                if types[eid] == 'Tablet' or current_page == 'BoardPage':
+                    cursor_on_tablet = True
+                    tablet_element_coord = elements_coord[eid]
+                    tablet_exists = True
+                    hovered_tablet_name = eid
+                    if tablet_exists:
+                        print('--------------------- TABLET EXISTS -----------------')
+                        action = 'pressTablet(' + str(el.calculate_error_margin(cursor_startX)) + ', ' + str(
+                            el.calculate_error_margin(cursor_startY)) + ')'
+                        event = current_page + ' ' + action
+                        print(event)
+                        event_history.append(event)
+                    # el.find_multi_appearance_element(view_frame, elements[eid])
 
                 if types[eid] == 'Draggable':
                     cursor_on_draggable = True
