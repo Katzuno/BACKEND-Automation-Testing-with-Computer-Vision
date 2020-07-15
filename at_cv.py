@@ -68,12 +68,14 @@ functions = el.load_functions(functions_path)
 # print(input_path)
 # test file
 cap = cv2.VideoCapture(input_path)
+
 if cap.isOpened() == False:
     print("Error opening video stream or file!")
 
 # get first frame for initial element search
 _, first_frame = cap.read()
 elements_coord = el.get_elements_coordinates(elements, first_frame, tm_threshold_elements)
+#print(elements_coord)
 elements_color_diff = el.get_elements_color_diff(elements, elements_coord, first_frame)
 
 view_frame = first_frame.copy()
@@ -101,6 +103,7 @@ index = 0
 
 started_moving = False
 new_draggable_coords = None
+have_tablet = False
 while cap.isOpened():
     ret, frame = cap.read()
     if ret == False:
@@ -158,6 +161,7 @@ while cap.isOpened():
 
         for eid in elements.keys():
             color = color_green
+            '''
             if elements_coord[eid] != [(0, 0), (0, 0)]:
                 if types[eid] == 'Tablet':
                     cursor_on_tablet = True
@@ -172,23 +176,28 @@ while cap.isOpened():
                         print(event)
                         event_history.append(event)
                     # el.find_multi_appearance_element(view_frame, elements[eid])
-
+            '''
             if elements_coord[eid] != [(0, 0), (0, 0)] and el.do_overlap(elements_coord[eid][0], elements_coord[eid][1],
                                                                          (startX, startY), (endX, endY)):
                 cursor_on_element = True
-                print('TYPE: ', types[eid])
-                if types[eid] == 'Tablet' or current_page == 'BoardPage':
+                #print('TYPE: ', types[eid])
+
+                if types[eid] == 'Tablet':
                     cursor_on_tablet = True
                     tablet_element_coord = elements_coord[eid]
                     tablet_exists = True
+                    have_tablet = True
                     hovered_tablet_name = eid
+                    '''
                     if tablet_exists:
                         print('--------------------- TABLET EXISTS -----------------')
                         action = 'pressTablet(' + str(el.calculate_error_margin(cursor_startX)) + ', ' + str(
                             el.calculate_error_margin(cursor_startY)) + ')'
                         event = current_page + ' ' + action
                         print(event)
-                        event_history.append(event)
+                        if action != 'pressTablet()':
+                            event_history.append(event)
+                    '''
                     # el.find_multi_appearance_element(view_frame, elements[eid])
 
                 if types[eid] == 'Draggable':
@@ -222,11 +231,10 @@ while cap.isOpened():
                                           3)
 
                     if tablet_exists:
-                        print('--------------------- TABLET EXISTS -----------------')
+                        #print('--------------------- TABLET EXISTS -----------------')
                         started_moving = False
-                        action = 'pressTablet(' + str(cursor_startX) + ', ' + str(cursor_endX) + ')'
+                        action = 'pressTablet(' + str(tablet_element_coord[0]) + ', ' + str(tablet_element_coord[1]) + ')'
                         event = current_page + ' ' + action
-                        print(event)
                         event_history.append(event)
 
                     # print('=====ELEMENT MOVED: ', element_moved, started_moving)
@@ -244,9 +252,9 @@ while cap.isOpened():
                         action = el.get_event(framesHistory[-2], elements, elements_coord, key, functions, types,
                                               input_fields_path)
                         event = current_page + ' ' + str(action)
-                        if action is not None and event != event_history[-1]:
+                        if action is not None and event != event_history[-1] and action != 'pressTablet()':
                             event_history.append(event)
-                            print(event)
+                            #print(event)
 
                         animation_start = False
                         click = False
@@ -263,6 +271,9 @@ while cap.isOpened():
     # cv2.waitKey(0)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
+if have_tablet:
+    event_history = list(dict.fromkeys(event_history))
 
 for event in event_history:
     output_file.write(event + '\n')

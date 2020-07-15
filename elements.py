@@ -46,10 +46,10 @@ def detect_text(image, mode='GCloud'):
 
 def check_element_moved(currentFrame, elements, hovered_draggable_name, draggable_coord):
     draggable_element = elements[hovered_draggable_name]
-    #print(draggable_coord)
+    # print(draggable_coord)
     (startX, startY, endX, endY) = find_element(currentFrame, draggable_element, 0.7)
     if [(startX, startY), (endX, endY)] != [(0, 0), (0, 0)] and \
-        [(startX, startY), (endX, endY)] != draggable_coord:
+            [(startX, startY), (endX, endY)] != draggable_coord:
         return True, [(startX, startY), (endX, endY)]
 
     return False, draggable_coord
@@ -87,7 +87,7 @@ def get_event(frame, elements, elements_coord, key, functions, types, input_fiel
 
                 # print('----- TEXT DETECTAT: -----')
                 # print(split_field_text)
-                #plt.imshow(frame)
+                # plt.imshow(frame)
                 plt.title('ORIGINAL IMAGE, detected ' + empty_field_text)
                 plt.show()
                 # plt.imshow(field_image)
@@ -107,9 +107,9 @@ def get_event(frame, elements, elements_coord, key, functions, types, input_fiel
                 field_image = frame[startY:endY, startX:endX]
 
                 radio_on = cv2.imread(os.path.join(input_fields_path, 'RadioButton_on.png'))
-                print('========================== get_event =====================')
-                print(radio_on)
-                print('========================== end get_event =================')
+                #print('========================== get_event =====================')
+                #print(radio_on)
+                #print('========================== end get_event =================')
 
                 (startX, startY, endX, endY) = find_element(field_image, radio_on)
 
@@ -129,9 +129,9 @@ def get_event(frame, elements, elements_coord, key, functions, types, input_fiel
                 field_image = frame[startY:endY, startX:endX]
 
                 radio_on = cv2.imread(os.path.join(input_fields_path, 'RadioButton_on.png'))
-                print('========================== get_event =====================')
-                print(radio_on)
-                print('========================== end get_event =================')
+                #print('========================== get_event =====================')
+                #print(radio_on)
+                #print('========================== end get_event =================')
 
                 (startX, startY, endX, endY) = find_element(field_image, radio_on)
 
@@ -316,9 +316,9 @@ def get_misclassified_elements_through_ocr(frame, element_1_name, element_1_coor
 
 
 def find_overlapping_elements_on_page(elements_on_page_name, elements_on_page_coordinates):
-    print(elements_on_page_coordinates)
+    #print(elements_on_page_coordinates)
     for i in range(len(elements_on_page_coordinates) - 1):
-        print(elements_on_page_coordinates[i])
+        #print(elements_on_page_coordinates[i])
         coord_elem_1_top_left, coord_elem_1_bottom_right = elements_on_page_coordinates[i][0], \
                                                            elements_on_page_coordinates[i][1]
         for j in range(i + 1, len(elements_on_page_coordinates)):
@@ -369,7 +369,7 @@ def load_functions(file_name):
             string_list = [s for s in re.split(' |, |,|\(|\)', line) if s != '' and s != '\n']
             functions[string_list[0], string_list[1]] = string_list[2:]
 
-    print(functions)
+    #print(functions)
     return functions
 
 
@@ -405,17 +405,28 @@ def get_elements_coordinates(elements, screenshot, threshold):
     elements_on_page_name = []
     elements_on_page_coordinates = []
 
-    print(elements.keys())
-
     for eid in elements.keys():
-        print(eid)
         template = cv2.cvtColor(elements[eid], cv2.COLOR_BGR2GRAY)
-        (startX, startY, endX, endY) = find_element(screenshot_gray, template, threshold)
-        current_element_coords = [(startX, startY), (endX, endY)]
-        if (startX, startY, endX, endY) != (0, 0, 0, 0):
-            elements_on_page_name.append(eid)
-            elements_on_page_coordinates.append(current_element_coords)
-        elements_coord[eid] = current_element_coords
+        ''':arg
+        if 'Tablet' in eid:
+            coords_arr = find_element(screenshot_gray, template, threshold, find_all=True)
+            for element_coords in coords_arr:
+                (startX, startY, endX, endY) = element_coords
+                print('-------', element_coords)
+                current_element_coords = [(startX, startY), (endX, endY)]
+                if (startX, startY, endX, endY) != (0, 0, 0, 0):
+                    elements_on_page_name.append(eid)
+                    elements_on_page_coordinates.append(current_element_coords)
+                elements_coord[eid] = current_element_coords
+        else:
+        '''
+        if True:
+            (startX, startY, endX, endY) = find_element(screenshot_gray, template, threshold)
+            current_element_coords = [(startX, startY), (endX, endY)]
+            if (startX, startY, endX, endY) != (0, 0, 0, 0):
+                elements_on_page_name.append(eid)
+                elements_on_page_coordinates.append(current_element_coords)
+            elements_coord[eid] = current_element_coords
 
     elem1_name, elem1_coord, elem2_name, elem2_coord = find_overlapping_elements_on_page(elements_on_page_name,
                                                                                          elements_on_page_coordinates)
@@ -447,7 +458,8 @@ def calculate_error_margin(value, margin=400):
     return randint(value - margin, value + margin)
 
 
-def find_element(image, element, threshold=0.9, edge_detection=False, multi_scale=False, visualize=False):
+def find_element(image, element, threshold=0.9, edge_detection=False, multi_scale=False, visualize=False,
+                 find_all=False):
     if multi_scale:
         scales = np.linspace(0.2, 1.0, 20)[::-1]
     else:
@@ -458,7 +470,8 @@ def find_element(image, element, threshold=0.9, edge_detection=False, multi_scal
     # print('========================== end find_elem =================')
     (tH, tW) = element.shape[:2]
     found = None
-
+    result = None
+    r = 1
     for scale in scales:
 
         image_resized = imutils.resize(image, width=int(image.shape[1] * scale))
@@ -484,14 +497,22 @@ def find_element(image, element, threshold=0.9, edge_detection=False, multi_scal
         if found is None or maxVal > found[0]:
             found = (maxVal, maxLoc, r)
 
-    (maxVal, maxLoc, r) = found
-    if maxVal > threshold:
-        (startX, startY) = (int(maxLoc[0] * r), int(maxLoc[1] * r))
-        (endX, endY) = (int((maxLoc[0] + tW) * r), int((maxLoc[1] + tH) * r))
+    if find_all == False:
+        (maxVal, maxLoc, r) = found
+        if maxVal > threshold:
+            (startX, startY) = (int(maxLoc[0] * r), int(maxLoc[1] * r))
+            (endX, endY) = (int((maxLoc[0] + tW) * r), int((maxLoc[1] + tH) * r))
+        else:
+            (startX, startY, endX, endY) = (0, 0, 0, 0)
+        return (startX, startY, endX, endY)
     else:
-        (startX, startY, endX, endY) = (0, 0, 0, 0)
-
-    return (startX, startY, endX, endY)
+        loc = np.where(result >= threshold)
+        multiple_objects_arr = []
+        for pt in zip(*loc[::-1]):
+            (startX, startY) = (int(pt[0] * r), int(pt[1] * r))
+            (endX, endY) = (int((pt[0] + tW) * r), int((pt[1] + tH) * r))
+            multiple_objects_arr.append((startX, startY, endX, endY))
+        return multiple_objects_arr
 
 
 def do_overlap(startX1_startY1, endX1_endY1, startX2_startY2, endX2_endY2):
