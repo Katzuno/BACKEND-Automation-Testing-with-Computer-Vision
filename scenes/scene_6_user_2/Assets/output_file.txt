@@ -1,0 +1,4 @@
+Starting Page - HomePage
+HomePage startGameBeginner()
+BoardPage pressTablet((920, 209), (1006, 297))
+BoardPage pressTablet((920, 812), (1006, 900))

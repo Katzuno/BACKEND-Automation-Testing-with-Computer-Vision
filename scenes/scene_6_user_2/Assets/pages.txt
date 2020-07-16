@@ -1,0 +1,2 @@
+Beginner_Button HomePage
+Board_Tablet BoardPage

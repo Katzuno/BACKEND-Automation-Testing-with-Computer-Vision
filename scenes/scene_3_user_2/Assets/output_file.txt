@@ -1,0 +1,5 @@
+Starting Page - RegisterPage
+RegisterPage registerUser(Erik Henning, test@test.com, test1234, Female)
+RegisterPage dragTo((613, 286), (1000, 340)
+LoginPage loginWithEmailAndPass(test@test.com, test1234)
+UserLoggedPage postMessage({Hello, I am a software developer!})

@@ -1,0 +1,2 @@
+Beginner_Button HomePage startGameBeginner()
+Board_Tablet BoardPage pressTablet()
